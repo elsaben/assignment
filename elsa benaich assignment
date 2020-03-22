@@ -1,0 +1,308 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[6]:
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings('ignore')
+
+
+# In[7]:
+
+
+pd.set_option('display.max_columns', None)  
+
+
+# In[8]:
+
+
+pd.set_option('display.max_rows', None)
+
+
+# In[9]:
+
+
+pd.set_option('display.max_colwidth', -1)
+
+
+# In[10]:
+
+
+data = pd.read_csv("train_1.csv")
+
+
+# In[11]:
+
+
+data.head()
+
+
+# In[12]:
+
+
+# data pre-processing
+
+
+# In[13]:
+
+
+data.corr()[1:2]
+
+
+# In[14]:
+
+
+# visitTime, purchaseTime, and hour are discarded ( high correlation with the dependant variable "label" ) ; id is also discarded ( the prediction of purchase is not a function of the id)
+
+
+# In[15]:
+
+
+data1 = data.drop(['id', 'visitTime', 'purchaseTime','hour'], axis=1)
+
+
+# In[16]:
+
+
+X = data1.loc[:, data1.columns != "label"]
+
+
+# In[17]:
+
+
+y = data1.loc[:, data1.columns == "label"]
+
+
+# In[18]:
+
+
+from sklearn.model_selection import train_test_split
+
+
+# In[19]:
+
+
+# Split the data into 30% test and 70% training
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=0)
+
+
+# In[20]:
+
+
+get_ipython().system('pip install imblearn ')
+
+
+# In[21]:
+
+
+from imblearn.over_sampling import SMOTE
+
+
+# In[22]:
+
+
+sm = SMOTE(sampling_strategy = 'minority', random_state = 42)
+
+
+# In[23]:
+
+
+X_train, y_train = sm.fit_resample(X_train, y_train)
+
+
+# In[24]:
+
+
+# Model 1 : Random forest 
+
+
+# In[25]:
+
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn import datasets
+from sklearn.feature_selection import SelectFromModel
+
+
+# In[26]:
+
+
+# Create a random forest classifier
+clf = RandomForestClassifier(n_estimators=1000, random_state=42)
+
+
+# In[27]:
+
+
+# Train the classifier
+clf.fit(X_train, y_train)
+
+
+# In[28]:
+
+
+pred = clf.predict_proba(X_test)
+y_pred = clf.predict(X_test)
+
+
+# In[29]:
+
+
+print(clf.score(X_train, y_train))
+print(clf.score(X_test, y_test))
+
+
+# In[30]:
+
+
+from sklearn.metrics import classification_report, accuracy_score
+
+
+# In[31]:
+
+
+print(classification_report(y_test,y_pred))
+
+
+# In[32]:
+
+
+from sklearn.metrics import confusion_matrix
+
+
+# In[33]:
+
+
+print(confusion_matrix(y_test,y_pred))
+
+
+# In[34]:
+
+
+from sklearn.model_selection import cross_val_score
+from numpy import mean
+
+
+# In[35]:
+
+
+scores = cross_val_score(clf, X, y, scoring='roc_auc',n_jobs=-1)
+
+
+# In[36]:
+
+
+print('Mean ROC AUC: %.3f' % mean(scores))
+
+
+# In[37]:
+
+
+#Test Set
+
+
+# In[38]:
+
+
+data_test=pd.read_csv("test_1.csv")
+
+
+# In[39]:
+
+
+data_test.tail()
+
+
+# In[40]:
+
+
+del data_test['label']
+
+
+# In[41]:
+
+
+ID = data_test['id']
+
+
+# In[42]:
+
+
+data_test = data_test.drop(['id', 'visitTime', 'purchaseTime','hour'], axis=1)
+
+
+# In[43]:
+
+
+X = data_test.loc[:, data_test.columns != "label"]
+
+
+# In[44]:
+
+
+y = data_test.loc[:, data_test.columns == "label"]
+
+
+# In[45]:
+
+
+prediction = pd.DataFrame(clf.predict_proba(data_test), columns=['Prob_0','Prob_1'])
+
+
+# In[46]:
+
+
+data_test['Prob_0'] = prediction['Prob_0']
+
+
+# In[47]:
+
+
+data_test['Prob_1'] = prediction['Prob_1']
+
+
+# In[48]:
+
+
+data_test['ID'] = ID
+
+
+# In[49]:
+
+
+Result = pd.DataFrame()
+
+
+# In[50]:
+
+
+Result['ID'] = data_test['ID']
+
+
+# In[51]:
+
+
+Result['Prob_0'] = data_test['Prob_0']
+
+
+# In[52]:
+
+
+Result['Prob_1'] = data_test['Prob_1']
+
+
+# In[54]:
+
+
+Result.set_index('ID')
+
+
+# In[ ]:
+
+
+
+
